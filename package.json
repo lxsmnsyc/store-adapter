@@ -57,5 +57,19 @@
   },
   "dependencies": {
     "@lyonph/react-hooks": "^0.3.4"
+  },
+  "description": "Connect stores and mutable sources to React the correct way.",
+  "author": "Alexis Munsayac <alexis.munsayac@gmail.com>",
+  "private": false,
+  "repository": {
+    "url": "https://github.com/lxsmnsyc/use-dispose.git",
+    "type": "git"
+  },
+  "homepage": "https://github.com/lxsmnsyc/use-dispose",
+  "bugs": {
+    "url": "https://github.com/lxsmnsyc/use-dispose/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
