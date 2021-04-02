@@ -1,0 +1,14 @@
+{
+  "root": true,
+  "extends": [
+    "lxsmnsyc/typescript/react"
+  ],
+  "parserOptions": {
+    "project": "./tsconfig.eslint.json"
+  },
+  "rules": {
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-unsafe-assignment": "off",
+    "react/prop-types": "off"
+  }
+}
