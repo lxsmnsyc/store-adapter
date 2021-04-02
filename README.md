@@ -2,6 +2,8 @@
 
 > Connect stores and mutable sources to React the correct way.
 
+[![NPM](https://img.shields.io/npm/v/react-store-adapter.svg)](https://www.npmjs.com/package/react-store-adapter) [![JavaScript Style Guide](https://badgen.net/badge/code%20style/airbnb/ff5a5f?icon=airbnb)](https://github.com/airbnb/javascript)
+
 ## Install
 
 ```bash

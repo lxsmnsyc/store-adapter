@@ -16,7 +16,12 @@
   },
   "license": "MIT",
   "keywords": [
-    "pridepack"
+    "pridepack",
+    "react",
+    "state",
+    "state-management",
+    "mutable-source",
+    "store"
   ],
   "name": "react-store-adapter",
   "devDependencies": {
