@@ -173,4 +173,4 @@ There are also some similarities:
 
 ## License
 
-MIT © [Lyon Software Technologies, Inc.](https://github.com/LyonInc)
+MIT © [lxsmnsyc](https://github.com/LyonInc)
