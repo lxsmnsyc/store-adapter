@@ -187,10 +187,18 @@ const StoreAdapterCore = memo(() => {
   const [pendingUpdatesVersion, setPendingUpdatesVersion] = useState([]);
 
   const batchUpdates = useConstantCallback((callback: () => void) => {
-    if (isMounted.current) {
-      pendingUpdates.current.push(callback);
-      setPendingUpdatesVersion([]);
-    }
+    // If the store was dispatched during render phase
+    // and the store notification is synchronous
+    // to the dispatch call, we defer the proxy update
+    setTimeout(() => {
+      // Update has been deferred, but the timing is off to the
+      // React cycle. We defer the update again to the passive
+      // effects.
+      if (isMounted.current) {
+        pendingUpdates.current.push(callback);
+        setPendingUpdatesVersion([]);
+      }
+    });
   });
 
   // This effect runs all the pending store registrations.
@@ -212,16 +220,8 @@ const StoreAdapterCore = memo(() => {
               const nextValue = store.read();
 
               if (store.shouldUpdate(instance.notifier.read(), nextValue)) {
-                // If the store was dispatched during render phase
-                // and the store notification is synchronous
-                // to the dispatch call, we defer the proxy update
-                setTimeout(() => {
-                  // Update has been deferred, but the timing is off to the
-                  // React cycle. We defer the update again to the passive
-                  // effects.
-                  batchUpdates(() => {
-                    instance.notifier.notify(nextValue);
-                  });
+                batchUpdates(() => {
+                  instance.notifier.notify(nextValue);
                 });
               }
             }
