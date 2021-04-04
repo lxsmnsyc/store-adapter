@@ -20,22 +20,33 @@ jobs:
           key: nodeModules-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
             nodeModules-
+
       - name: Install dependencies
         run: yarn install --frozen-lockfile
         env:
           CI: true
 
-      - name: Begin Tests
-        run: yarn test --coverage
+      - name: Begin bootstrap
+        run: yarn bootstrap
         env:
           CI: true
-
-      - name: Lint
-        run: yarn lint
+      
+      - name: Clean
+        run: yarn clean
         env:
           CI: true
 
       - name: Build
         run: yarn build
+        env:
+          CI: true
+
+      - name: Begin Tests
+        run: yarn test:coverage
+        env:
+          CI: true
+
+      - name: Lint
+        run: yarn lint
         env:
           CI: true

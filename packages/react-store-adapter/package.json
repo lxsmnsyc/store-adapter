@@ -1,0 +1,76 @@
+{
+  "version": "0.1.1",
+  "types": "dist/types/index.d.ts",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "exports": {
+    "require": "./dist/cjs/index.js",
+    "import": "./dist/esm/index.js"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "engines": {
+    "node": ">=10"
+  },
+  "license": "MIT",
+  "keywords": [
+    "pridepack",
+    "react",
+    "state",
+    "state-management",
+    "mutable-source",
+    "store"
+  ],
+  "name": "react-store-adapter",
+  "devDependencies": {
+    "@testing-library/jest-dom": "^5.11.10",
+    "@testing-library/react": "^11.2.6",
+    "@testing-library/react-hooks": "^5.1.1",
+    "@types/jest": "^26.0.22",
+    "@types/node": "^14.14.37",
+    "@types/react": "^17.0.3",
+    "eslint": "^7.23.0",
+    "eslint-config-lxsmnsyc": "^0.1.20",
+    "pridepack": "^0.8.1",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-test-renderer": "^17.0.2",
+    "redux": "^4.0.5",
+    "ts-jest": "^26.5.4",
+    "tslib": "^2.1.0",
+    "typescript": "^4.2.3"
+  },
+  "peerDependencies": {
+    "react": "^16.8.0 || ^17.0.0",
+    "react-dom": "^16.8.0 || ^17.0.0"
+  },
+  "scripts": {
+    "prepublish": "pridepack clean && pridepack build",
+    "build": "pridepack build",
+    "type-check": "pridepack check",
+    "lint": "pridepack lint",
+    "test": "pridepack test --passWithNoTests",
+    "clean": "pridepack clean",
+    "watch": "pridepack watch"
+  },
+  "dependencies": {
+    "@lyonph/react-hooks": "^0.3.4",
+    "react-scoped-model": "^2.0.2"
+  },
+  "description": "Connect stores and mutable sources to React the correct way.",
+  "author": "Alexis Munsayac <alexis.munsayac@gmail.com>",
+  "private": false,
+  "repository": {
+    "url": "https://github.com/lxsmnsyc/react-store-adapter.git",
+    "type": "git"
+  },
+  "homepage": "https://github.com/lxsmnsyc/store-adapter/packages/react-store-adapter",
+  "bugs": {
+    "url": "https://github.com/lxsmnsyc/react-store-adapter/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

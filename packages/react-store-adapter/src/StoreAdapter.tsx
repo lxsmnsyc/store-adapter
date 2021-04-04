@@ -33,16 +33,17 @@ import {
   useSubscription,
 } from '@lyonph/react-hooks';
 import React, {
-  createContext,
   FC,
-  memo,
-  MutableRefObject,
-  useContext,
   useDebugValue,
   useEffect,
   useRef,
   useState,
 } from 'react';
+import {
+  createNullaryModel,
+  useScopedModelExists,
+  useValue,
+} from 'react-scoped-model';
 
 type NotifierListener<T> = (value: T) => void;
 
@@ -140,38 +141,7 @@ interface StoreAdapterContext {
   subscribe<T>(store: StoreAdapter<T>, callback: () => void): () => void;
 }
 
-type StoreAdapterContextRef = MutableRefObject<StoreAdapterContext | undefined>;
-
-const StoreAdapterContext = (
-  createContext<StoreAdapterContextRef | undefined>(undefined)
-);
-
-interface StoreAdapterMemory<T> {
-  notifier: Notifier<T>;
-  unsubscribe?: () => void;
-}
-
-function useStoreAdapterContextRef(): StoreAdapterContextRef {
-  const context = useContext(StoreAdapterContext);
-
-  if (context) {
-    return context;
-  }
-
-  throw new Error('Attempt to access missing StoreAdapterContext reference.');
-}
-
-function useStoreAdapterContext(): StoreAdapterContext {
-  const context = useStoreAdapterContextRef();
-
-  if (context.current) {
-    return context.current;
-  }
-
-  throw new Error('Attempt to access missing StoreAdapterContext.');
-}
-
-const StoreAdapterCore = memo(() => {
+const StoreAdapterCore = createNullaryModel<StoreAdapterContext>(() => {
   const isMounted = useRef(true);
 
   useEffect(() => () => {
@@ -270,9 +240,7 @@ const StoreAdapterCore = memo(() => {
     memory.clear();
   }, [memory]);
 
-  const contextRef = useStoreAdapterContextRef();
-
-  if (!contextRef.current) {
+  return useConstant(() => {
     const getInstance = <T, >(store: StoreAdapter<T>): StoreAdapterMemory<T> => {
       // Get instance
       let instance = memory.get(store.id) as StoreAdapterMemory<T>;
@@ -282,7 +250,7 @@ const StoreAdapterCore = memo(() => {
         instance = {
           notifier: proxy,
         };
-
+  
         // If root is still mounted, write to memory
         if (isMounted.current) {
           memory.set(store.id, instance);
@@ -290,39 +258,55 @@ const StoreAdapterCore = memo(() => {
       }
       return instance;
     };
-    contextRef.current = {
+
+    return ({
       register: (store) => {
         if (isMounted.current) {
           pendingStores.current.push(store);
           setPendingStoresVersion([]);
         }
       },
-      read: (store) => getInstance(store).notifier.read(),
+      read: (store) => (
+        getInstance(store).notifier.read()
+      ),
       subscribe: (store, callback) => {
         const instance = getInstance(store);
-
+    
         const unsubscribe = instance.notifier.subscribe(callback);
-
+    
         return () => {
           // Attempt to unsubscribe
           unsubscribe();
-
+    
           // Self-destroy instance of there are no listeners
           if (!instance.notifier.hasListeners()) {
             if (instance.unsubscribe) {
               instance.unsubscribe();
             }
             instance.notifier.destroy();
-
+    
             memory.delete(store.id);
           }
         };
       },
-    };
-  }
+    })
+  });
+}, {
+  displayName: 'StoreAdapterCore',
+});
 
-  return null;
-}, () => true);
+interface StoreAdapterMemory<T> {
+  notifier: Notifier<T>;
+  unsubscribe?: () => void;
+}
+
+function useStoreAdapterRestriction(): void {
+  const exists = useScopedModelExists(StoreAdapterCore);
+
+  if (!exists) {
+    throw new Error('Attempt to access missing StoreAdapterContext.');
+  }
+}
 
 function identity<T, R>(value: T): R {
   return value as unknown as R;
@@ -344,12 +328,14 @@ export function useStoreAdapter<T, R>(
   store: StoreAdapter<T>,
   options?: UseStoreAdapterOptions<T, R>,
 ): R {
+  useStoreAdapterRestriction();
+
   // Apply default values
   const getSnapshot = options?.getSnapshot ?? identity;
   const shouldUpdate = options?.shouldUpdate ?? defaultUpdate;
 
   // Access adapter root context
-  const context = useStoreAdapterContext();
+  const context = useValue(StoreAdapterCore);
 
   useEffect(() => {
     context.register(store);
@@ -363,6 +349,7 @@ export function useStoreAdapter<T, R>(
       shouldUpdate,
     }),
     {
+      context,
       store,
       getSnapshot,
       shouldUpdate,
@@ -381,18 +368,8 @@ export function useStoreAdapter<T, R>(
   return state;
 }
 
-const StoreAdapterRootInternal: FC = ({ children }) => {
-  const ref = useRef<StoreAdapterContext>();
-  return (
-    <StoreAdapterContext.Provider value={ref}>
-      <StoreAdapterCore />
-      {children}
-    </StoreAdapterContext.Provider>
-  );
-};
-
 export const StoreAdapterRoot: FC = ({ children }) => {
-  const context = useContext(StoreAdapterContext);
+  const context = useScopedModelExists(StoreAdapterCore);
 
   // There only should be a single root for every tree
   if (context) {
@@ -400,15 +377,12 @@ export const StoreAdapterRoot: FC = ({ children }) => {
   }
 
   return (
-    <StoreAdapterRootInternal>
+    <StoreAdapterCore.Provider>
       {children}
-    </StoreAdapterRootInternal>
+    </StoreAdapterCore.Provider>
   );
 };
 
 if (process.env.NODE_ENV !== 'production') {
-  StoreAdapterContext.displayName = 'StoreAdapterContext';
-  StoreAdapterCore.displayName = 'StoreAdapterCore';
-  StoreAdapterRootInternal.displayName = 'StoreAdapterRootInternal';
   StoreAdapterRoot.displayName = 'StoreAdapterRoot';
 }
