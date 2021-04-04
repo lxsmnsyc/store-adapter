@@ -252,7 +252,7 @@ const StoreAdapterCore = createNullaryModel<StoreAdapterContext>(() => {
         instance = {
           notifier: proxy,
         };
-  
+
         // If root is still mounted, write to memory
         if (isMounted.current) {
           memory.set(store.id, instance);
@@ -273,25 +273,25 @@ const StoreAdapterCore = createNullaryModel<StoreAdapterContext>(() => {
       ),
       subscribe: (store, callback) => {
         const instance = getInstance(store);
-    
+
         const unsubscribe = instance.notifier.subscribe(callback);
-    
+
         return () => {
           // Attempt to unsubscribe
           unsubscribe();
-    
+
           // Self-destroy instance of there are no listeners
           if (!instance.notifier.hasListeners()) {
             if (instance.unsubscribe) {
               instance.unsubscribe();
             }
             instance.notifier.destroy();
-    
+
             memory.delete(store.id);
           }
         };
       },
-    })
+    });
   });
 }, {
   displayName: 'StoreAdapterCore',
