@@ -139,7 +139,6 @@ export function createStoreAdapter<T>(
 }
 
 interface StoreAdapterContext {
-  register<T>(store: StoreAdapter<T>): void;
   read<T>(store: StoreAdapter<T>): T;
   subscribe<T>(store: StoreAdapter<T>, callback: () => void): () => void;
 }
@@ -152,8 +151,9 @@ const StoreAdapterCore = createNullaryModel<StoreAdapterContext>(() => {
   }, []);
 
   const memory = useConstant(() => new Map<string, StoreAdapterMemory<any>>());
+  const registered = useConstant(() => new Set<StoreAdapter<any>>());
 
-  const pendingStores = useRef<StoreAdapter<any>[]>([]);
+  const pendingStores = useConstant(() => new Set<StoreAdapter<any>>());
   const [pendingStoresVersion, setPendingStoresVersion] = useState([]);
 
   const pendingUpdates = useRef<(() => void)[]>([]);
@@ -176,16 +176,16 @@ const StoreAdapterCore = createNullaryModel<StoreAdapterContext>(() => {
 
   // This effect runs all the pending store registrations.
   useEffect(() => {
-    const batch = pendingStores.current;
-    if (batch.length) {
+    if (pendingStores.size) {
+      const stores = new Set(pendingStores);
       // Clear the current pending list
-      pendingStores.current = [];
+      pendingStores.clear();
 
       // Iterate the pending list
-      batch.forEach((store) => {
+      stores.forEach((store) => {
         // Check instance
         const instance = memory.get(store.id);
-        if (instance) {
+        if (instance && !registered.has(store)) {
           const checkForUpdates = () => {
             // Only subscribe if StoreAdapter root
             if (isMounted.current) {
@@ -212,10 +212,12 @@ const StoreAdapterCore = createNullaryModel<StoreAdapterContext>(() => {
           if (unsubscribe) {
             instance.unsubscribe = unsubscribe;
           }
+
+          registered.add(store);
         }
       });
     }
-  }, [batchUpdates, memory, pendingStoresVersion]);
+  }, [batchUpdates, memory, pendingStores, pendingStoresVersion, registered]);
 
   // This effect is for running all scheduled updates
   // from proxy stores
@@ -225,9 +227,7 @@ const StoreAdapterCore = createNullaryModel<StoreAdapterContext>(() => {
       pendingUpdates.current = [];
 
       batch.forEach((update) => {
-        if (isMounted.current) {
-          update();
-        }
+        update();
       });
     }
   }, [pendingUpdatesVersion]);
@@ -257,18 +257,20 @@ const StoreAdapterCore = createNullaryModel<StoreAdapterContext>(() => {
         // If root is still mounted, write to memory
         if (isMounted.current) {
           memory.set(store.id, instance);
+
+          pendingStores.add(store);
+
+          setTimeout(() => {
+            if (isMounted.current) {
+              setPendingStoresVersion([]);
+            }
+          });
         }
       }
       return instance;
     };
 
     return ({
-      register: (store) => {
-        if (isMounted.current) {
-          pendingStores.current.push(store);
-          setPendingStoresVersion([]);
-        }
-      },
       read: (store) => (
         getInstance(store).notifier.read()
       ),
@@ -289,6 +291,7 @@ const StoreAdapterCore = createNullaryModel<StoreAdapterContext>(() => {
             instance.notifier.destroy();
 
             memory.delete(store.id);
+            registered.delete(store);
           }
         };
       },
@@ -339,10 +342,6 @@ export function useStoreAdapter<T, R>(
 
   // Access adapter root context
   const context = useValue(StoreAdapterCore);
-
-  useEffect(() => {
-    context.register(store);
-  }, [store, context]);
 
   // Create subscription
   const subscription = useMemoCondition(
