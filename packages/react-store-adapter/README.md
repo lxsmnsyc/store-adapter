@@ -95,7 +95,9 @@ function MemoizedCount() {
 
 - `read(): State`: Provides a way for the store adapter to access the current state of the store.
 - `subscribe(callback: Function): Function | undefined`: Provides a way for the store adapter to subscribe to the store and receive further updates. It accepts a callback value that is subscribed to the store and must return a cleanup callback which is used to unsubscribe from the store.
-- `shouldUpdate(prev: State, next: State): boolean`: Optional. Tells when the store adapter should update the tracked state. This is useful for emulating immutable states equality (deep comparison).
+- `shouldUpdate(prev: State, next: State): boolean`: Optional. Tells when the store adapter should update the tracked state. This is useful for emulating immutable states equality (deep comparison). Defaults to `Object.is`.
+
+- `keepAlive: boolean`: Prevents automatic store cleanup. Defaults to false.
 
 `createStoreAdapter` then returns a store adapter instance which is used in the React environment (specifically, `useStoreAdapter`).
 
@@ -125,6 +127,10 @@ function MemoizedCount() {
 ### Selective state updates
 
 `react-store-adapter` provides a way to transform and filter state, which adds a benefit for the UI to save render time specially if the state is considered equal.
+
+### Automatic store cleanup
+
+To prevent memory leaks, `react-store-adapter` automatically cleans up store instance internally if those stores has no listeners. `createStoreAdapter` can accept `keepAlive: true` to prevent automatic cleanup.
 
 ## Examples
 
