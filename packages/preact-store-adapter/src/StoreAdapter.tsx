@@ -108,11 +108,13 @@ interface StoreAdapterBase<T> {
 interface StoreAdapterOptions<T> extends StoreAdapterBase<T> {
   readonly id?: string;
   readonly shouldUpdate?: (prev: T, next: T) => boolean;
+  readonly keepAlive?: boolean;
 }
 
 export interface StoreAdapter<T> extends StoreAdapterBase<T> {
   readonly id: string;
   readonly shouldUpdate: (prev: T, next: T) => boolean;
+  readonly keepAlive: boolean;
 }
 
 let index = 0;
@@ -133,6 +135,7 @@ export function createStoreAdapter<T>(
   return {
     id: `Store-${getIndex()}`,
     shouldUpdate: defaultUpdate,
+    keepAlive: false,
     ...options,
   };
 }
@@ -281,7 +284,7 @@ const StoreAdapterCore = createNullaryModel<StoreAdapterContext>(() => {
           unsubscribe();
 
           // Self-destroy instance of there are no listeners
-          if (!instance.notifier.hasListeners()) {
+          if (!(store.keepAlive || instance.notifier.hasListeners())) {
             if (instance.unsubscribe) {
               instance.unsubscribe();
             }
