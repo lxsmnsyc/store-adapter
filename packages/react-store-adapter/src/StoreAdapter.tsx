@@ -355,9 +355,10 @@ export function useStoreAdapter<T, R>(
       shouldUpdate,
     },
     (prev, next) => (
-      !Object.is(prev.store, next.store)
-      || !Object.is(prev.getSnapshot, next.getSnapshot)
-      || !Object.is(prev.shouldUpdate, next.shouldUpdate)
+      !(Object.is(prev.store, next.store)
+      && Object.is(prev.context, next.context)
+      && Object.is(prev.getSnapshot, next.getSnapshot)
+      && Object.is(prev.shouldUpdate, next.shouldUpdate))
     ),
   );
 
