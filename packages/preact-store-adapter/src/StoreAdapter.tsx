@@ -141,6 +141,7 @@ export function createStoreAdapter<T>(
 }
 
 interface StoreAdapterContext {
+  useRegister<T>(store: StoreAdapter<T>): void;
   read<T>(store: StoreAdapter<T>): T;
   subscribe<T>(store: StoreAdapter<T>, callback: () => void): () => void;
 }
@@ -259,20 +260,36 @@ const StoreAdapterCore = createNullaryModel<StoreAdapterContext>(() => {
         // If root is still mounted, write to memory
         if (isMounted.current) {
           memory.set(store.id, instance);
-
-          pendingStores.add(store);
-
-          setTimeout(() => {
-            if (isMounted.current) {
-              setPendingStoresVersion([]);
-            }
-          });
         }
       }
       return instance;
     };
 
+    let currentTask: never[] = [];
+
     return ({
+      useRegister: (store) => {
+        if (!registered.has(store)) {
+          pendingStores.add(store);
+
+          if (typeof window !== 'undefined') {
+            const newTask: never[] = [];
+            currentTask = newTask;
+
+            setTimeout(() => {
+              if (currentTask === newTask && isMounted.current) {
+                setPendingStoresVersion([]);
+              }
+            });
+          }
+        }
+
+        useEffect(() => {
+          if (isMounted.current) {
+            setPendingStoresVersion([]);
+          }
+        }, []);
+      },
       read: (store) => (
         getInstance(store).notifier.read()
       ),
@@ -320,7 +337,7 @@ function identity<T, R>(value: T): R {
   return value as unknown as R;
 }
 
-interface UseStoreAdapterOptions<T, R> {
+export interface UseStoreAdapterOptions<T, R> {
   getSnapshot?: (value: T) => R;
   shouldUpdate?: (prev: R, next: R) => boolean;
 }
@@ -344,6 +361,8 @@ export function useStoreAdapter<T, R>(
 
   // Access adapter root context
   const context = useValue(StoreAdapterCore);
+
+  context.useRegister(store);
 
   // Create subscription
   const subscription = useMemoCondition(
