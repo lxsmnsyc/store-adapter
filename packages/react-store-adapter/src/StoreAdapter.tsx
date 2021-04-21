@@ -98,22 +98,20 @@ export default class Notifier<T> {
 type Subscribe = (callback: () => void) => Unsubscribe;
 type Unsubscribe = undefined | (() => void) | void;
 
-interface StoreAdapterBase<T> {
+export interface StoreAdapterBase<T> {
   readonly read: () => T;
   readonly subscribe: Subscribe;
 }
 
-interface StoreAdapterOptions<T> extends StoreAdapterBase<T> {
-  readonly id?: string;
-  readonly shouldUpdate?: (prev: T, next: T) => boolean;
-  readonly keepAlive?: boolean;
-}
-
-export interface StoreAdapter<T> extends StoreAdapterBase<T> {
+export interface StoreAdapterPartial<T> {
   readonly id: string;
   readonly shouldUpdate: (prev: T, next: T) => boolean;
   readonly keepAlive: boolean;
+  readonly onCleanup: () => void;
 }
+
+export type StoreAdapter<T> = StoreAdapterPartial<T> & StoreAdapterBase<T>;
+export type StoreAdapterOptions<T> = Partial<StoreAdapterPartial<T>> & StoreAdapterBase<T>;
 
 let index = 0;
 
@@ -127,6 +125,10 @@ function defaultUpdate<T>(prev: T, next: T): boolean {
   return !Object.is(prev, next);
 }
 
+function defaultCleanup() {
+  // no-op
+}
+
 export function createStoreAdapter<T>(
   options: StoreAdapterOptions<T>,
 ): StoreAdapter<T> {
@@ -134,6 +136,7 @@ export function createStoreAdapter<T>(
     id: `Store-${getIndex()}`,
     shouldUpdate: defaultUpdate,
     keepAlive: false,
+    onCleanup: defaultCleanup,
     ...options,
   };
 }
@@ -240,6 +243,7 @@ const StoreAdapterCore = createNullaryModel<StoreAdapterContext>(() => {
         item.unsubscribe();
       }
       item.notifier.destroy();
+      item.reference.onCleanup();
     });
     memory.clear();
   }, [memory]);
@@ -252,6 +256,7 @@ const StoreAdapterCore = createNullaryModel<StoreAdapterContext>(() => {
         // Create instance if nothing is found
         const proxy = new Notifier<T>(store.read());
         instance = {
+          reference: store,
           notifier: proxy,
         };
 
@@ -306,6 +311,7 @@ const StoreAdapterCore = createNullaryModel<StoreAdapterContext>(() => {
               instance.unsubscribe();
             }
             instance.notifier.destroy();
+            instance.reference.onCleanup();
 
             memory.delete(store.id);
             registered.delete(store);
@@ -319,6 +325,7 @@ const StoreAdapterCore = createNullaryModel<StoreAdapterContext>(() => {
 });
 
 interface StoreAdapterMemory<T> {
+  reference: StoreAdapter<T>;
   notifier: Notifier<T>;
   unsubscribe?: () => void;
 }
