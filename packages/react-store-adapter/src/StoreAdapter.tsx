@@ -269,6 +269,9 @@ const StoreAdapterCore = createNullaryModel<StoreAdapterContext>(() => {
     };
 
     let currentTask: never[] = [];
+    let currentMarkTask: never[] = [];
+
+    const markedStores = new Set<StoreAdapter<any>>();
 
     return ({
       useRegister: (store) => {
@@ -292,6 +295,32 @@ const StoreAdapterCore = createNullaryModel<StoreAdapterContext>(() => {
             setPendingStoresVersion([]);
           }
         }, []);
+
+        useEffect(() => {
+          if (isMounted.current && !markedStores.has(store)) {
+            const newTask: never[] = [];
+            currentMarkTask = newTask;
+
+            markedStores.add(store);
+
+            setTimeout(() => {
+              if (currentMarkTask === newTask && isMounted.current) {
+                memory.forEach((instance) => {
+                  if (!markedStores.has(instance.reference)) {
+                    if (instance.unsubscribe) {
+                      instance.unsubscribe();
+                    }
+                    instance.notifier.destroy();
+                    instance.reference.onCleanup();
+
+                    memory.delete(instance.reference.id);
+                    registered.delete(instance.reference);
+                  }
+                });
+              }
+            });
+          }
+        }, [store]);
       },
       read: (store) => (
         getInstance(store).notifier.read()
